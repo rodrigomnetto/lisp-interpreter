@@ -1,7 +1,7 @@
 (ns lisp-interpreter.core
   (:gen-class))
 
-(def env-base
+(def primitives
   {'+ +
    '- -
    '* *
@@ -13,12 +13,29 @@
    '<= <=
    '>= >=})
 
+(def env-base
+  (atom (conj primitives {})))
+
 (declare -eval eval-if)
 
-(defn is-definition? [expr]
-  (= expr 'define))
 
-(defn eval-definition [expr])
+;(defn compound-)
+
+(defn is-definition? [expr]
+  (->
+   expr
+   first
+   (= 'define)))
+
+(defn eval-definition [expr, env]
+  (let [definition (second expr)]
+    (cond
+      (symbol? definition) (swap! env assoc definition (last expr))
+      :else
+      (let [name (first definition)
+            params (rest definition)
+            body (last expr)]
+        (swap! env assoc name (list 'procedure params body))))))
 
 (defn self-evaluation? [expr]
   (or
@@ -42,25 +59,30 @@
     (-eval (nth expr 2) env)
     (-eval (nth expr 3) env)))
 
-(defn variable? [expr]
-  (symbol? expr))
+(defn is-primitive? [expr]
+  (->
+   primitives
+   vals
+   set
+   (contains? expr)))
 
-
-
+(defn -apply [func params]
+  (cond
+    (is-primitive? func) (func params)))
 
 (defn -eval [expr, env]
-  (println expr)
+  (println (deref env))
   (cond
     (self-evaluation? expr) expr
-    (variable? expr) (get env expr)
-    ;(is-definition? expr) (eval-definition expr)
+    (symbol? expr) (get (deref env) expr)
+    (is-definition? expr) (eval-definition expr env)
     (if? expr) (eval-if expr env)
     (application? expr) (apply (-eval (operator expr) env) (map #(-eval % env) (operands expr)))))
 
 
 (defn read-loop []
   (let [l (read-line)]
-    (-eval (read-string l) env-base)))
+    (println (-eval (read-string l) env-base))))
 
 (defn -main
   [& args]
