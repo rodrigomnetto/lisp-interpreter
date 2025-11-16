@@ -18,9 +18,6 @@
 
 (declare -eval eval-if)
 
-
-;(defn compound-)
-
 (defn is-definition? [expr]
   (->
    expr
@@ -34,7 +31,7 @@
       :else
       (let [name (first definition)
             params (rest definition)
-            body (last expr)]
+            body (drop 2 expr)]
         (swap! env assoc name (list 'procedure params body))))))
 
 (defn self-evaluation? [expr]
@@ -66,18 +63,38 @@
    set
    (contains? expr)))
 
-(defn -apply [func params]
+(defn is-procedure? [func]
+  (-> func
+      first
+      (= 'procedure)))
+
+(defn create-env [func params current-env]
+  (let [symbols (second func)
+        bindings (zipmap symbols params)]
+    (atom (into bindings {:last-env current-env}))))
+
+(defn -apply [func params env]
   (cond
-    (is-primitive? func) (func params)))
+    (is-primitive? func) (apply func params)
+    (is-procedure? func) (let [new-env (create-env func params env)]
+                           (-> #(-eval % new-env)
+                               (map (last func))
+                               last))))
+
+(defn get-from-env [expr env]
+  (let [env-deref (deref env)
+        val (get env-deref expr)]
+    (if (= val nil)
+      (get-from-env expr (:last-env env-deref))
+      val)))
 
 (defn -eval [expr, env]
-  (println (deref env))
   (cond
     (self-evaluation? expr) expr
-    (symbol? expr) (get (deref env) expr)
+    (symbol? expr) (get-from-env expr env)
     (is-definition? expr) (eval-definition expr env)
     (if? expr) (eval-if expr env)
-    (application? expr) (apply (-eval (operator expr) env) (map #(-eval % env) (operands expr)))))
+    (application? expr) (-apply (-eval (operator expr) env) (map #(-eval % env) (operands expr)) env)))
 
 
 (defn read-loop []
@@ -90,6 +107,6 @@
 
 
 
-
+;implementar car cdr display newline and lambda
 
 
