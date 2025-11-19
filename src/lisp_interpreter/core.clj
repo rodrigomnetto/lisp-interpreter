@@ -12,7 +12,12 @@
    '> >
    '<= <=
    '>= >=
-   'list list})
+   'list list
+   'cons cons
+   'car first
+   'cdr rest
+   'display print
+   'newline println})
 
 (def env-base
   (atom (conj primitives {})))
