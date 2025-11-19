@@ -11,7 +11,8 @@
    '< <
    '> >
    '<= <=
-   '>= >=})
+   '>= >=
+   'list list})
 
 (def env-base
   (atom (conj primitives {})))
@@ -37,10 +38,10 @@
 (defn self-evaluation? [expr]
   (or
    (number? expr)
-   (string? expr)))
+   (string? expr)
+   (boolean? expr)))
 
-(defn application? [expr]
-  (and (seq? expr) (symbol? (first expr))))
+(defn application? [expr] (seq? expr))
 
 (defn operator [expr]
   (first expr))
@@ -68,6 +69,9 @@
       first
       (= 'procedure)))
 
+(defn quoted? [expr]
+  (= 'quote (first expr)))
+
 (defn create-env [func params current-env]
   (let [symbols (second func)
         bindings (zipmap symbols params)]
@@ -91,6 +95,7 @@
 (defn -eval [expr, env]
   (cond
     (self-evaluation? expr) expr
+    (quoted? expr) (second expr)
     (symbol? expr) (get-from-env expr env)
     (is-definition? expr) (eval-definition expr env)
     (if? expr) (eval-if expr env)
@@ -107,6 +112,6 @@
 
 
 
-;implementar car cdr display newline and lambda
+;implementar car cdr cons display newline and lambda listas, quotes
 
 
